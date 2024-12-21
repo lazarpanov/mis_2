@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mis_2/firebase_options.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'services/notification_service.dart';
 import 'screens/main_screen.dart';
+import 'screens/login_screen.dart';
 
-void main() {
+final NotificationService notificationService = NotificationService();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await notificationService.initNotification();
+
   runApp(MyApp());
 }
 
@@ -37,7 +53,35 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: MainScreen(),
+      // Dynamically choose the home screen based on the authentication state
+      home: AuthGate(),
+    );
+  }
+}
+
+// AuthGate widget to handle user authentication state
+class AuthGate extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final FirebaseAuth _auth = FirebaseAuth.instance;
+
+    // Check if the user is signed in
+    return StreamBuilder<User?>(
+      stream: _auth.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasData) {
+          notificationService.scheduleJokeNotification();
+          return MainScreen();
+        } else {
+          return LoginScreen();
+        }
+      },
     );
   }
 }
