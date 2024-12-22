@@ -26,7 +26,6 @@ class _FavoriteJokesScreenState extends State<FavoriteJokesScreen> {
   void removeJoke(Joke joke) {
     setState(() {
       displayedFavorites.remove(joke);
-      widget.removeFromFavorites(joke);
     });
   }
 

@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../services/api_services.dart';
 import 'joke_list_screen.dart';
 import 'random_joke_screen.dart';
-import 'favorite_jokes_screen.dart';
-import '../models/joke.dart';
-import '../services/notification_service.dart'; // Import NotificationService
-import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
 
 class MainScreen extends StatefulWidget {
   @override
@@ -18,19 +11,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final ApiService apiService = ApiService();
   List<String> jokeTypes = [];
-  List<Joke> favoriteJokes = [];
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  late NotificationService notificationService;
 
   @override
   void initState() {
     super.initState();
     fetchJokeTypes();
-    notificationService = NotificationService();
-    notificationService.initNotification();
-
-    // Request permission for notifications
-    notificationService.requestPermissions();
   }
 
   void fetchJokeTypes() async {
@@ -44,116 +29,27 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  void addToFavorites(Joke joke) {
-    setState(() {
-      if (!favoriteJokes.contains(joke)) {
-        favoriteJokes.add(joke);
-      }
-    });
-  }
-
-  void removeFromFavorites(Joke joke) {
-    setState(() {
-      favoriteJokes.remove(joke);
-    });
-  }
-
-  Future<void> signOut() async {
-    await _auth.signOut();
-    Navigator.pushReplacementNamed(context, '/login');
-  }
-
-  Future<void> sendTestNotification() async {
-    final now = DateTime.now();
-    final scheduledDate = now.add(const Duration(seconds: 5)); // Notification in 5 seconds
-
-    await notificationService.notificationsPlugin.zonedSchedule(
-      1,
-      'Test Notification',
-      'This is a test notification.',
-      tz.TZDateTime.from(scheduledDate, tz.local),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'test_channel',
-          'Test Channel',
-          channelDescription: 'Channel for testing notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Test notification scheduled in 5 seconds!')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    User? user = _auth.currentUser;
-
-    if (user == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Joke Categories'),
-        ),
-        body: Center(
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-            child: Text('Please log in to view jokes'),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('Joke Categories'),
+        title: Text('Joke types'),
         actions: [
           IconButton(
-            icon: Icon(Icons.lightbulb_outline),
+            icon: Icon(Icons.sentiment_very_satisfied),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => RandomJokeScreen()),
               );
             },
-          ),
-          IconButton(
-            icon: Icon(Icons.favorite),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FavoriteJokesScreen(
-                    favoriteJokes: favoriteJokes,
-                    removeFromFavorites: removeFromFavorites,
-                  ),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.notifications),
-            onPressed: sendTestNotification, // Trigger test notification
-          ),
-          IconButton(
-            icon: Icon(Icons.exit_to_app),
-            onPressed: signOut, // Sign out functionality
-          ),
+          )
         ],
       ),
       body: jokeTypes.isEmpty
-          ? Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(),
+      )
           : ListView.builder(
         padding: EdgeInsets.all(10),
         itemCount: jokeTypes.length,
@@ -166,16 +62,11 @@ class _MainScreenState extends State<MainScreen> {
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               trailing: Icon(Icons.arrow_forward, color: Colors.teal),
-              onTap: () async {
-                final jokes = await apiService.getJokesByType(type);
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => JokeListScreen(
-                      type: type,
-                      jokes: jokes,
-                      addToFavorites: addToFavorites,
-                    ),
+                    builder: (_) => JokeListScreen(type: type),
                   ),
                 );
               },
